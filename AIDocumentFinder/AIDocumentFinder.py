@@ -127,11 +127,43 @@ def getResultOfCounting(countedWords, accuracy, path, fileName, *, write=False):
         return countedWords.most_common(accuracy)
 
 
-def downloadDpcumentsFromGoogle(pathToLinks, pathToDownload, extension=".doc"):
+def downloadDpcumentsFromGoogle(pathToLinks, path):
+    import requests
+    from bs4 import BeautifulSoup
+    import re
+    import shutil
+    fileWithSources = "%s\%s" % (path, "sources.txt")
+    fileWithSources = open(fileWithSources, "a")
+    pathToLinks = r"%s" % pathToLinks
+    #pathToDownload = r"%s" % pathToDownload
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36 OPR/47.0.2631.55"}
     with open(pathToLinks, "r") as links:
-        links = links.split("\n")
+        links = links.read().split("\n")
         for link in links:
-            pass
+            text = requests.get(link, headers=headers).text.encode("utf-8")
+            if debug:
+                print(text)
+            soup = BeautifulSoup(text, "lxml")
+            hrefLinks = soup.find_all("h3", {"class":["r"]})
+            for item in hrefLinks:
+                fullLink = item.find("a").get("href")[7:]
+                for i in re.findall(r".*\.doc", fullLink):
+                    if i:
+                        fileName = re.findall(r"^[http://|htpps://].*\.doc", i)
+                        fullPath = "%s\%s" % (path, fileName)
+                        if debug:
+                            print(fileName)
+                            print(fullPath)
+                        with open(fullPath, "wb") as file:
+                            file.write(shutil.copyfileobj(requests.get(i, stream=True).raw, file))
+                print(fullLink)
+                print("\n")
+                print(downloadLink)
+                print("\n")
+    fileWithSources.close()
+
+            
+
         
 
     
@@ -146,4 +178,9 @@ if __name__ == "__main__":
         #print(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "Test.doc")))
         #print(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc"))))
         #countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc")))
-        print(getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc"))), 10, "D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc", write=True))
+        #print(getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc"))), 10, "D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc", write=True))
+        #downloadDpcumentsFromGoogle("D:\Projects\AIIDocumentFinder\AIDocumentFinder\links.txt", "D:\Projects\AIIDocumentFinder\AIDocumentFinder")
+        import re
+        test = ["https://check.com/dasadadasdassd.doc", "http://csdasda.com/dasasddbbvnhjfhd.doc"]
+        for i in test:
+            print(re.findall(r"\w.*\.doc", i))
