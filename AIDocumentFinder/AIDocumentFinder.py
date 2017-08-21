@@ -11,11 +11,12 @@ TODO: create neural network which will make decision for you
 debug = True
 import win32com.client
 def getTextFromWordDocument(path, fileName, *, debugging=False):
-    import win32com.client
     """
     Using: path where will be created temporary files, filename with .doc or pdf
     Returns: text from original file
+    imports win32com.client
     """
+    import win32com.client
     app = win32com.client.Dispatch("Word.Application")
     pathToFile = r"%s\%s" % (path, fileName)
     return app.Documents.Open(pathToFile).Content.Text
@@ -61,15 +62,22 @@ def getTextFromPdfDocument(path, fileName, *, debugging=False): #TODO
 
 def createArrayOfWords(text, *, debuggin=False):
     """
-    
+    Input: text,
+    imports: re
     """
     import re
     text = text.lower()
     text = re.findall("\w+", text)
     return text
+
 def countEveryWord(words):
+    """
+    Using: counts how many times each word appears in the array of words
+    than delete words witihout any information like "the", "and" and so on
+    """
     from collections import Counter
     c = Counter(words)
+    #Deletes trash words
     del c["та"]
     del c["на"]
     del c["таеп"]
@@ -91,17 +99,24 @@ def countEveryWord(words):
         del c[i]
     for i in lalphabet:
         del c[i]
-
+    #Return the result
     return c
 
 
 
-def getResultOfCounting(countedWords, accuracy, path, *, write=False):
+def getResultOfCounting(countedWords, accuracy, path, fileName, *, write=False):
+    """
+    Using with write=False - returns info about most common words which number is set with accuracy
+    Using with write=True - writes to file info about most common words which number is set with accuracy
+    """
     if write:
         pathToFile = r"%s\readyToExplore.txt" % path
         with open(pathToFile, "w") as file:
+            text = "---------------------------------------------------\n%s\n" % fileName
+            file.write(text)
             for i in countedWords.most_common(accuracy):
                 file.write("%s:%s\n" % i)
+            file.write("---------------------------------------------------\n")
     if not write:
         return countedWords.most_common(accuracy)
         
@@ -118,4 +133,4 @@ if __name__ == "__main__":
         #print(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "Test.doc")))
         #print(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc"))))
         #countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc")))
-        print(getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc"))), 10, "D:\Projects\AIIDocumentFinder\AIDocumentFinder"))
+        print(getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc"))), 10, "D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc", write=True))
