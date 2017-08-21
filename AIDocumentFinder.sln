@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.8
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "AIDocumentFinder", "AIDocumentFinder\AIDocumentFinder.pyproj", "{BF9AE900-9643-47F4-8979-4D932DEA5E37}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BF9AE900-9643-47F4-8979-4D932DEA5E37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF9AE900-9643-47F4-8979-4D932DEA5E37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B3643EA8-97CE-46D2-991F-F1EBE920EAC7}
+	EndGlobalSection
+EndGlobal
