@@ -90,6 +90,12 @@ def countEveryWord(words):
     del c["ня"]
     del c["для"]
     del c["gc"]
+    del c["of"]
+    del c["the"]
+    del c["при"]
+    del c["за"]
+    del c["end"]
+    del c["and"]
     for i in range(1000):
         tmp = "%s" % i
         del c[tmp]
@@ -119,6 +125,13 @@ def getResultOfCounting(countedWords, accuracy, path, fileName, *, write=False):
             file.write("---------------------------------------------------\n")
     if not write:
         return countedWords.most_common(accuracy)
+
+
+def downloadDpcumentsFromGoogle(pathToLinks, pathToDownload, extension=".doc"):
+    with open(pathToLinks, "r") as links:
+        links = links.split("\n")
+        for link in links:
+            pass
         
 
     
@@ -133,4 +146,4 @@ if __name__ == "__main__":
         #print(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "Test.doc")))
         #print(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc"))))
         #countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc")))
-        print(getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc"))), 10, "D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc", write=True))
+        print(getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc"))), 10, "D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc", write=True))
