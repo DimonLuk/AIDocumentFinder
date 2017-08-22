@@ -110,54 +110,61 @@ def countEveryWord(words):
 
 
 
-def getResultOfCounting(countedWords, accuracy, path, fileName, *, write=False):
+def getResultOfCounting(countedWords, accuracy, fileName, file):
     """
     Using with write=False - returns info about most common words which number is set with accuracy
     Using with write=True - writes to file info about most common words which number is set with accuracy
     """
-    if write:
-        pathToFile = r"%s\readyToExplore.txt" % path
-        with open(pathToFile, "w") as file:
-            text = "---------------------------------------------------\n%s\n" % fileName
-            file.write(text)
-            for i in countedWords.most_common(accuracy):
-                file.write("%s:%s\n" % i)
-            file.write("---------------------------------------------------\n")
-    if not write:
-        return countedWords.most_common(accuracy)
+    text = "---------------------------------------------\n%s\n" % fileName
+    file.write(text)
+    for word in countedWords.most_common(accuracy):
+        file.write("%s:%s\n" % word)
 
 
-def downloadDocuments(pathToSave, *, fromInternet=False, link="", pathToFiles=""):
+def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="", pathToFiles=""):
+    """
+    Using: pathToSave - where downloaded docs will be located, 
+    fromTheInternet - if true - get pages directly from google(link has to be passed), if false - get pages from local files(pathToFiles has to be passed(encoding - utf-8))
+    """
     import urllib.request
     from bs4 import BeautifulSoup
     import re
     import shutil
     pages=[]
+    schema = r".*\.%s" % extension
+    schema = re.compile(schema)
+    #Get pages from the Internet or from local files
     if fromInternet:
         pages = getPagesFromTheInternet(link)
     else:
         pages = getPagesFromFiles(pathToFiles)
+    
+    #Open file, where source links have to be located 
     fileWithSources = "%s\%s" % (pathToSave, "sources.txt")
     fileWithSources = open(fileWithSources, "a")
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36 OPR/47.0.2631.55"}
+    #Then iterate through each page
     for page in pages:
         soup = BeautifulSoup(page, "lxml")
-        hrefContainer =  soup.find_all("h3", {"class":["r"]})
+        hrefContainer =  soup.find_all("h3", {"class":["r"]})#h3 contains <a> with the href to download files
         for item in hrefContainer:
             if fromInternet:
-                fullLink = item.find("a").get("href")[7:]
+                fullLink = item.find("a").get("href")[7:]#if page is from the Internet it looks like /?url?=htttp(s)://...
             else:
-                fullLink = item.find("a").get("href")
-            print(fullLink)
+                fullLink = item.find("a").get("href")#if page is from file its href looks like http(s)://...
+            if debug:
+                print(fullLink)
+            #print looks like ---------------------\nfullLink\n--------------------
             fileWithSources.write("-----------------------------------------\n")
             fileWithSources.write(fullLink)
             fileWithSources.write("\n")
-            for link in re.findall(r".*\.doc", fullLink):
-                if link:
+            #if page is from th Internet it can contain some junk after download link, regexpr deletes this junk
+            for link in schema.findall(fullLink):
+                if link:#Throw empty links
                     fileName = ""
                     parts = link.split("/")
+                    #Create normal name
                     for part in parts:
-                        if ".doc" in part:
+                        if (".%s" % extension) in part:
                             fileName = part
                     fullPath = r"%s\%s" % (pathToSave, fileName)
                     try:
@@ -165,7 +172,7 @@ def downloadDocuments(pathToSave, *, fromInternet=False, link="", pathToFiles=""
                             with urllib.request.urlopen(link) as download:
                                 file.write(download.read())
                         if fromInternet:
-                            fileWithSources.write(link)
+                            fileWithSources.write(link)#Write download link because it differs from fullLink
                             fileWithSources.write("\n")
                     except FileNotFoundError:
                         pass
@@ -189,15 +196,4 @@ def getPagesFromTheInternet(link):
     
 if __name__ == "__main__":
     if debug:
-        #print(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "Test.doc"))
-        #print(getTextFromPdfDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "Test.pdf"))
-        #print(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "Test.doc")))
-        #print(createArrayOfWords(getTextFromPdfDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.pdf")))
-        #print(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc")))
-        #print(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "Test.doc"))
-        #print(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "Test.doc")))
-        #print(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc"))))
-        #countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc")))
-        #print(getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc"))), 10, "D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc", write=True))
-        #downloadDpcumentsFromGoogle("D:\Projects\AIIDocumentFinder\AIDocumentFinder\links.txt", "D:\Projects\AIIDocumentFinder\AIDocumentFinder")
-        downloadDocuments("D:\Projects\AIIDocumentFinder\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\AIDocumentFinder\htmls")
+        downloadDocuments("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\htmls")
