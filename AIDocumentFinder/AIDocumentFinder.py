@@ -150,9 +150,8 @@ def downloadDocuments(pathToSave, *, fromInternet=False, link="", pathToFiles=""
                 fullLink = item.find("a").get("href")
             print(fullLink)
             fileWithSources.write("-----------------------------------------\n")
-            if fromInternet:
-                fileWithSources.write(fullLink)
-                fileWithSources.write("\n")
+            fileWithSources.write(fullLink)
+            fileWithSources.write("\n")
             for link in re.findall(r".*\.doc", fullLink):
                 if link:
                     fileName = ""
@@ -161,12 +160,15 @@ def downloadDocuments(pathToSave, *, fromInternet=False, link="", pathToFiles=""
                         if ".doc" in part:
                             fileName = part
                     fullPath = r"%s\%s" % (pathToSave, fileName)
-                    with open(fullPath, "wb") as file:
-                        with urllib.request.urlopen(link) as download:
-                            file.write(download.read())
-                    if fromInternet:
-                        fileWithSources.write(link)
-                        fileWithSources.write("\n")
+                    try:
+                        with open(fullPath, "wb") as file:
+                            with urllib.request.urlopen(link) as download:
+                                file.write(download.read())
+                        if fromInternet:
+                            fileWithSources.write(link)
+                            fileWithSources.write("\n")
+                    except FileNotFoundError:
+                        pass
             fileWithSources.write("-----------------------------------------\n")
     fileWithSources.close()
 
