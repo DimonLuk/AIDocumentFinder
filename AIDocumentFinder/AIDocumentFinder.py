@@ -127,45 +127,63 @@ def getResultOfCounting(countedWords, accuracy, path, fileName, *, write=False):
         return countedWords.most_common(accuracy)
 
 
-def downloadDpcumentsFromGoogle(pathToLinks, path):
-    import requests
+def downloadDocuments(pathToSave, *, fromInternet=False, link="", pathToFiles=""):
+    import urllib.request
     from bs4 import BeautifulSoup
     import re
     import shutil
-    fileWithSources = "%s\%s" % (path, "sources.txt")
+    pages=[]
+    if fromInternet:
+        pages = getPagesFromTheInternet(link)
+    else:
+        pages = getPagesFromFiles(pathToFiles)
+    fileWithSources = "%s\%s" % (pathToSave, "sources.txt")
     fileWithSources = open(fileWithSources, "a")
-    pathToLinks = r"%s" % pathToLinks
-    #pathToDownload = r"%s" % pathToDownload
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.78 Safari/537.36 OPR/47.0.2631.55"}
-    with open(pathToLinks, "r") as links:
-        links = links.read().split("\n")
-        for link in links:
-            text = requests.get(link, headers=headers).text.encode("utf-8")
-            if debug:
-                print(text)
-            soup = BeautifulSoup(text, "lxml")
-            hrefLinks = soup.find_all("h3", {"class":["r"]})
-            for item in hrefLinks:
+    for page in pages:
+        soup = BeautifulSoup(page, "lxml")
+        hrefContainer =  soup.find_all("h3", {"class":["r"]})
+        for item in hrefContainer:
+            if fromInternet:
                 fullLink = item.find("a").get("href")[7:]
-                for i in re.findall(r".*\.doc", fullLink):
-                    if i:
-                        fileName = re.findall(r"^[http://|htpps://].*\.doc", i)
-                        fullPath = "%s\%s" % (path, fileName)
-                        if debug:
-                            print(fileName)
-                            print(fullPath)
-                        with open(fullPath, "wb") as file:
-                            file.write(shutil.copyfileobj(requests.get(i, stream=True).raw, file))
-                print(fullLink)
-                print("\n")
-                print(downloadLink)
-                print("\n")
+            else:
+                fullLink = item.find("a").get("href")
+            print(fullLink)
+            fileWithSources.write("-----------------------------------------\n")
+            if fromInternet:
+                fileWithSources.write(fullLink)
+                fileWithSources.write("\n")
+            for link in re.findall(r".*\.doc", fullLink):
+                if link:
+                    fileName = ""
+                    parts = link.split("/")
+                    for part in parts:
+                        if ".doc" in part:
+                            fileName = part
+                    fullPath = r"%s\%s" % (pathToSave, fileName)
+                    with open(fullPath, "wb") as file:
+                        with urllib.request.urlopen(link) as download:
+                            file.write(download.read())
+                    if fromInternet:
+                        fileWithSources.write(link)
+                        fileWithSources.write("\n")
+            fileWithSources.write("-----------------------------------------\n")
     fileWithSources.close()
 
-            
-
-        
-
+def getPagesFromFiles(pathToFiles):
+    import os
+    pages = []
+    try:
+        for dir, subdirs, files in os.walk(pathToFiles):
+            for file in files:
+                absPath = "%s\%s" % (pathToFiles, file)
+                with open(absPath, "rb") as doc:
+                    pages.append(doc.read().decode("utf-8"))
+    except StopIteration:
+        pass
+    return pages
+def getPagesFromTheInternet(link):
+    pass
     
 if __name__ == "__main__":
     if debug:
@@ -180,7 +198,4 @@ if __name__ == "__main__":
         #countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest1.doc")))
         #print(getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument("D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc"))), 10, "D:\Projects\AIIDocumentFinder\AIDocumentFinder", "realtest.doc", write=True))
         #downloadDpcumentsFromGoogle("D:\Projects\AIIDocumentFinder\AIDocumentFinder\links.txt", "D:\Projects\AIIDocumentFinder\AIDocumentFinder")
-        import re
-        test = ["https://check.com/dasadadasdassd.doc", "http://csdasda.com/dasasddbbvnhjfhd.doc"]
-        for i in test:
-            print(re.findall(r"\w.*\.doc", i))
+        downloadDocuments("D:\Projects\AIIDocumentFinder\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\AIDocumentFinder\htmls")
