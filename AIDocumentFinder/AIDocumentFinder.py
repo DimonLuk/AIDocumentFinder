@@ -1,20 +1,22 @@
 """
-This odule if the collection of functions.
+This module is the collection of functions.
 Using them you are able to
 1) Scan target file(.doc or .pdf) and find which words are the most common for it
 2) Donwload .doc or .pdf files from google
 3) Scan downloaded files and decide if they are usable
-imports: win32com.client
+To know imports see every function
 TODO Deal with pdf
+TODO make analytics on words
 TODO: create neural network which will make decision for you
 """
 debug = True
 import win32com.client
-def getTextFromWordDocument(path, fileName, *, debugging=False):
+def getTextFromWordDocument(path, fileName):
     """
-    Using: path where will be created temporary files, filename with .doc or pdf
-    Returns: text from original file
-    imports win32com.client
+    path to file in format: "Disk:\Path\To\File\"
+    fileName in format: "Document.doc(x)"
+    Returnes text from Document.doc(x)
+    Imports win32com.client
     """
     import win32com.client
     app = win32com.client.Dispatch("Word.Application")
@@ -31,55 +33,29 @@ def getTextFromWordDocument(path, fileName, *, debugging=False):
 
     
 
-def getTextFromPdfDocument(path, fileName, *, debugging=False): #TODO
+def getTextFromPdfDocument(path, fileName): #TODO
+    pass
+
+
+def createTupleOfWords(text):
     """
-    Using: path where will be created temporary files, filename with .doc or pdf
-    Returns: text from original file
-    """
-    from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-    from pdfminer.converter import TextConverter
-    from pdfminer.layout import LAParams
-    from pdfminer.pdfpage import PDFPage
-    from io import StringIO
-    
-    pathToFile = r"%s\%s" % (path, fileName)
-    rsrcmgr = PDFResourceManager()
-    retstr = StringIO()
-    codec = 'utf-8'
-    laparams = LAParams()
-    device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
-    fp = open(pathToFile, 'rb')
-    interpreter = PDFPageInterpreter(rsrcmgr, device)
-    password = ""
-    maxpages = 0
-    caching = True
-    pagenos=set()
-
-    for page in PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password,caching=caching, check_extractable=True):
-        interpreter.process_page(page)
-
-    text = retstr.getvalue()
-
-    fp.close()
-    device.close()
-    retstr.close()
-    return text[:-1]
-
-
-def createArrayOfWords(text, *, debuggin=False):
-    """
-    Input: text,
-    imports: re
+    text which is returned by getTextFromWordDocument or  getTextFromPdfDocument
+    Returnes array of words which is formated to lower case
+    Imports re
     """
     import re
     text = text.lower()
     text = re.findall("\w+", text)
-    return text
+    return tuple(text)
 
 def countEveryWord(words,*, filter=[], wordLengthMoreThan=4):
     """
-    Using: counts how many times each word appears in the array of words
-    than delete words witihout any information like "the", "and" and so on
+    words - array of words in lower case.
+    filter - optional array of words to be found and counted
+    wordLengthMoreThan - optional. it's the minimum length of the word
+    Returns tuple which contains Counter({"word":int(homMuchAppearsInTheArray)}) and total sum of each word in the counter
+    filter has more priority than wordLengthMoreThan
+    Imports: collections.Counter
     """
     from collections import Counter
     c = Counter(words)
@@ -126,14 +102,25 @@ def countEveryWord(words,*, filter=[], wordLengthMoreThan=4):
             del c[item]
     
     #Return the result
-    return (c,sum(c.values()))
+    return tuple((c,sum(c.values())))
 
 
 
 def getResultOfCounting(infoAboutWords, accuracy, fileName, file):
     """
-    Using with write=False - returns info about most common words which number is set with accuracy
-    Using with write=True - writes to file info about most common words which number is set with accuracy
+    infoAboutWords - tuple. The first element - Counter({"word":int(homMuchAppearsInTheArray)}), the second is total sum of each word in the counter
+    accuracy - how much of the most popular words have to appear in the file
+    fileName - the name of the file where words are counted
+    file - is already opened file where to write info about files
+    Writes info about each file with name "fileName" in opened file "file".
+    Looks like:
+    ---------------------------------------------
+    fileName
+    total sum of each word in the counter
+    word:howMuchItAppears
+    ---------------------------------------------
+    Returns: nothing
+    Imports: nothing
     """
     text = "---------------------------------------------\n%s\n%s\n" % (fileName, infoAboutWords[1])
     file.write(text)
@@ -146,13 +133,22 @@ def getResultOfCounting(infoAboutWords, accuracy, fileName, file):
 
 def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="", pathToFiles=""):
     """
-    Using: pathToSave - where downloaded docs will be located, 
-    fromTheInternet - if true - get pages directly from google(link has to be passed), if false - get pages from local files(pathToFiles has to be passed(encoding - utf-8))
+    Two ways of using:
+    1) Save htmls automaticaly(Dont work)
+    2) Save htmls manualy
+    pathToSave - where to save files in format "Disk:\Path\To\Save"
+    extension - defines which type is used("doc" or "pdf"). "doc" is the same as "docx" but "doc" is more general and has to be used
+    fromInternet - defines if the app should use manualy saved htmls or get them form link
+    link - defines link which is used to get pages from the Google directly
+    pathToFiles - defines where local htmls saved
+
+    Downloads documents to pathToSave
+    Returns: Nothing
+    Imports: urllib.request, bs4(BeautifulSoup)
     """
     import urllib.request
     from bs4 import BeautifulSoup
     import re
-    import shutil
     pages=[]
     schema = r".*\.%s" % extension
     schema = re.compile(schema)
@@ -163,8 +159,8 @@ def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="
         pages = getPagesFromFiles(pathToFiles)
     
     #Open file, where source links have to be located 
-    fileWithSources = "%s\%s" % (pathToSave, "sources.txt")
-    fileWithSources = open(fileWithSources, "a")
+    fileWithSources = r"%s\%s" % (pathToSave, "sources.txt")
+    fileWithSources = open(fileWithSources, "w")
     #Then iterate through each page
     for page in pages:
         soup = BeautifulSoup(page, "lxml")
@@ -206,37 +202,47 @@ def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="
     fileWithSources.close()
 
 def getPagesFromFiles(pathToFiles):
+    """
+    pathToFiles (in format: "Disk:\Path\To\Files") defines where manually saved htmls are stored
+    iterates over each file in the pathToFiles dir and create array of pages
+    Returns: array of pages
+    Imports: os
+    """
     import os
     pages = []
     i = 0
     for dir, subdirs, files in os.walk(pathToFiles):
         for file in files:
-            if i == len(files):
-                break
             absPath = "%s\%s" % (pathToFiles, file)
             with open(absPath, "rb") as doc:
-                pages.append(doc.read().decode("utf-8"))
-            print("Proceed: ",(i/len(files))*100, "%")
-            i += 1
+                pages.append(doc.read().decode("utf-8"))#Has to decode as utf-8 because these are google's pages
+                
     return pages
-def getPagesFromTheInternet(link):
+def getPagesFromTheInternet(link):#TODO
     pass
 def countWordsInFiles(pathToFiles,*, extension="doc"):
+    """
+    pathToFiles in format "Drive:\Path\to\files" defines where downloaded documents.extension are stored
+    extension defines extension of the file: "doc", "pdf". "doc" and "docx" are the same but "doc" has to be used
+    Opens file pathToFile\info.txt where info about each file will be written using function getResultOfCounting
+    Returns: nothing
+    Imports: os
+    """
     import os
-    info = open("%s\info.txt" % pathToFiles, "w")
+    info = open("%s\info.txt" % pathToFiles, "w")#Create file with info
     i = 0
     for dir, subdirs, files in os.walk(pathToFiles):
         numOfFiles = len(files)
         if debug:
             print(numOfFiles)
         for file in files:
-            if ((i/numOfFiles)*100) == 100:
+            if i == numOfFiles:
                 break
-            if extension == "doc":
+            if extension == "doc":#Check if it's not something else
                 if (".doc" in file):
-                    getResultOfCounting(countEveryWord(createArrayOfWords(getTextFromWordDocument(pathToFiles, file)), wordLengthMoreThan=5), 20, file, info)
+                    getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file)), wordLengthMoreThan=5), 20, file, info)
             if debug:
-                text = "Proceed: %s" % ((i/numOfFiles)*100)
+                text = "Proceed: %.d" % ((i/numOfFiles)*100)
                 text += "%"
                 print(text)
                 print(i)
@@ -245,6 +251,13 @@ def countWordsInFiles(pathToFiles,*, extension="doc"):
     info.close()
 #----------------------Analysing--------------------------
 def countTheMostPopularWords(path, accuracy):
+    """
+    path in format "Drive:\path" defines where file with info about documents is stored
+    accuracy defines how many of the most popular words will be calculated
+    Reads files and finds how many times the most popular words from files appers in the info.txt
+    Returns: nothing
+    Imports: re, collections
+    """
     import re
     import collections
     pattern1 = re.compile(r"\w+:\d+")
@@ -268,7 +281,7 @@ def plotNumsOfWords(path, accuracy):
     
 if __name__ == "__main__":
     if debug:
-        """downloadDocuments("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\htmls")
-        countWordsInFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")"""
+        downloadDocuments(r"D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\htmls")
+        countWordsInFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
         #countTheMostPopularWords("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", 20)
         #plotNumsOfWords("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", 20)
