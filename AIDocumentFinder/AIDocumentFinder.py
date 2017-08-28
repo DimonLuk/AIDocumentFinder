@@ -59,6 +59,7 @@ def countEveryWord(words,*, filter=[], wordLengthMoreThan=4):
     """
     from collections import Counter
     c = Counter(words)
+    found = []
     #Deletes trash words
     if (not wordLengthMoreThan) and (not filter):
         del c["та"]
@@ -91,16 +92,14 @@ def countEveryWord(words,*, filter=[], wordLengthMoreThan=4):
     elif filter:
         for item in c:
             for i in filter:
-                if item != i:
-                    del c[item]
+                if i in item:
+                    found.append(i)
     elif wordLengthMoreThan:
-        toDelete = []
         for item in c:
-            if len(item) <= wordLengthMoreThan:
-                toDelete.append(item)
-        for item in toDelete:
-            del c[item]
-    
+            if len(item) >= wordLengthMoreThan:
+                found.append(item)
+    c = Counter(found)
+    print(c)
     #Return the result
     return tuple((c,sum(c.values())))
 
@@ -122,13 +121,14 @@ def getResultOfCounting(infoAboutWords, accuracy, fileName, file):
     Returns: nothing
     Imports: nothing
     """
-    text = "---------------------------------------------\n%s\n%s\n" % (fileName, infoAboutWords[1])
-    file.write(text)
-    for word in infoAboutWords[0].most_common(accuracy):
-        try:
-            file.write("%s:%s\n" % (word[0], word[1]))
-        except UnicodeEncodeError:
-            pass
+    if infoAboutWords[1] != 0:
+        text = "---------------------------------------------\n%s\n%s\n" % (fileName, infoAboutWords[1])
+        file.write(text)
+        for word in infoAboutWords[0].most_common(accuracy):
+            try:
+                file.write("%s:%s\n" % (word[0], word[1]))
+            except UnicodeEncodeError:
+                pass
 
 
 def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="", pathToFiles=""):
@@ -183,15 +183,22 @@ def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="
                     parts = link.split("/")
                     #Create normal name
                     for part in parts:
-                        if (".%s" % extension) in part:
+                        if (".%sx" % extension) in part:
+                            if len(part) > 20:
+                                fileName = part[len(part)-10:]+"."+extension
+                            fileName = part
+                        elif (".%s" % extension) in part:
                             if len(part) > 20:
                                 fileName = part[len(part)-10:]+"."+extension
                             fileName = part
                     fullPath = r"%s\%s" % (pathToSave, fileName)
                     try:
                         with open(fullPath, "wb") as file:
-                            with urllib.request.urlopen(link) as download:
-                                file.write(download.read())
+                            try:
+                                with urllib.request.urlopen(link) as download:
+                                    file.write(download.read())
+                            except:
+                                pass
                         if fromInternet:
                             fileWithSources.write(link)#Write download link because it differs from fullLink
                             fileWithSources.write("\n")
@@ -240,7 +247,7 @@ def countWordsInFiles(pathToFiles,*, extension="doc"):
                 break
             if extension == "doc":#Check if it's not something else
                 if (".doc" in file):
-                    getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file)), wordLengthMoreThan=5), 20, file, info)
+                    getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file)), filter=["синх", "диагнос", "двиг", "метод", "сравн", "парам"]), 20, file, info)
             if debug:
                 text = "Proceed: %.d" % ((i/numOfFiles)*100)
                 text += "%"
@@ -249,8 +256,11 @@ def countWordsInFiles(pathToFiles,*, extension="doc"):
                 print(file)
             i += 1
     info.close()
+def delteTrash(path):
+    with open("%s\info.txt" % path, "r") as file:
+        print(file.readline())
 #----------------------Analysing--------------------------
-def countTheMostPopularWords(path, accuracy):
+def getInfo(path, extension="doc"):
     """
     path in format "Drive:\path" defines where file with info about documents is stored
     accuracy defines how many of the most popular words will be calculated
@@ -260,28 +270,45 @@ def countTheMostPopularWords(path, accuracy):
     """
     import re
     import collections
-    pattern1 = re.compile(r"\w+:\d+")
-    pattern2 = re.compile("\w+:")
-    c = collections.Counter()
+    pattern1 = re.compile(r"^\d+$")
+    pattern2 = re.compile((r"\w+\.%s") % extension)
+    info = []
+    tmp = []
+    counter = 0
     with open("%s\info.txt" % path, "r") as file:
         while file.readline():
-            text = file.readline()[:-1]
+            text = file.readline()
             if pattern1.findall(text):
-                text = pattern2.findall(text)[0][:-1]
-                c[text] += 1
-    
-    with open("%s\computedInfo.txt" % path, "w") as file:
-        for item in c.most_common(accuracy):
-            file.write("-------------------------------------------\n")
-            file.write("%s:%s\n" % (item[0], item[1]))
-
-def plotNumsOfWords(path, accuracy):
-    pass
+                tmp.append(int(pattern1.findall(text)[0]))
+                info.append(tuple(tmp))
+                tmp = []
+            if "---------------------------------------------" in text:
+                counter += 1
+            if pattern2.findall(text):
+                tmp.append(pattern2.findall(text)[0])
+    print(counter)
+    print(info)
+    return info
+def deleteJunkyFiles(path, extension="doc"):
+    import os
+    with open(("%s\info.txt" % path), "r") as infoTxt:
+        for dir, subdirs, files in os.walk(path):
+            for file in files:
+                if extension in file:
+                    if not (file in infoTxt.read()):
+                        os.remove("%s\%s" % (path, file))
+def plotNumsOfWords(infoToPlot):
+    import matplotlib.pyplot as plt
+    x = infoToPlot
+    y = infoToPlot
+    plt.scatter(x, y, marker="^")
+    plt.show()
 
     
 if __name__ == "__main__":
     if debug:
-        downloadDocuments(r"D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\htmls")
-        countWordsInFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
-        #countTheMostPopularWords("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", 20)
-        #plotNumsOfWords("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", 20)
+        #downloadDocuments(r"D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\htmls")
+        #countWordsInFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
+        #delteTrash("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
+        #getInfo("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
+        deleteJunkyFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
