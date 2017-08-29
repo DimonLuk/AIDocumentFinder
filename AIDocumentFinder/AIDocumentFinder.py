@@ -230,7 +230,7 @@ def getPagesFromFiles(pathToFiles):
     return pages
 def getPagesFromTheInternet(link):#TODO
     pass
-def countWordsInFiles(pathToFiles,*, extension="doc"):
+def countWordsInFiles(pathToFiles, accuracy, *, extension="doc", filter=[], wordlLengthMoreThan=0):
     """
     pathToFiles in format "Drive:\Path\to\files" defines where downloaded documents.extension are stored
     extension defines extension of the file: "doc", "pdf". "doc" and "docx" are the same but "doc" has to be used
@@ -243,26 +243,21 @@ def countWordsInFiles(pathToFiles,*, extension="doc"):
     info = []
     with open("%s\info.json" % pathToFiles, "r") as file:
         info = json.load(file)
-    i = 0
-    """for dir, subdirs, files in os.walk(pathToFiles):
-        numOfFiles = len(files)
-        if debug:
-            print(numOfFiles)
-        for file in files:
-            if i == numOfFiles:
-                break
-            if extension == "doc":#Check if it's not something else
-                if (".doc" in file):
-                    getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file)), filter=["синх", "диагнос", "двиг", "метод", "сравн", "парам"]), 20, file, info)
+    if (not filter) and (not accuracy):
+        for file in info:
             if debug:
-                text = "Proceed: %.d" % ((i/numOfFiles)*100)
-                text += "%"
-                print(text)
-                print(i)
-                print(file)
-            i += 1"""
-    for file in info:
-        file = getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file["name"]))), 20, file)
+                print(file["name"])
+            file = getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file["name"]))), accuracy, file)
+    elif filter:
+        for file in info:
+            if debug:
+                print(file["name"])
+            file = getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file["name"])), filter=filter), accuracy, file)
+    elif accuracy != 0:
+        for file in info:
+            if debug:
+                print(file["name"])
+            file = getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file["name"])), wordLengthMoreThan=wordlLengthMoreThan), accuracy, file)
     with open("%s\info.json" % pathToFiles, "w") as file:
         json.dump(info, file, ensure_ascii=False, indent=1)
 
@@ -320,7 +315,7 @@ def plotNumsOfWords(infoToPlot):
 if __name__ == "__main__":
     if debug:
         #downloadDocuments(r"D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\htmls")
-        countWordsInFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
+        countWordsInFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", 20, filter=["синх", "метод", "диагнос", "двиг", "тест"])
         #delteTrash("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
         #getInfo("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
         #deleteJunkyFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
