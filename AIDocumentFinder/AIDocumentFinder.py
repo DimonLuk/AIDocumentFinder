@@ -59,6 +59,7 @@ def countEveryWord(words,*, filter=[], wordLengthMoreThan=4):
     """
     from collections import Counter
     c = Counter(words)
+    totalNum = sum(c.values())
     found = []
     #Deletes trash words
     if (not wordLengthMoreThan) and (not filter):
@@ -99,13 +100,12 @@ def countEveryWord(words,*, filter=[], wordLengthMoreThan=4):
             if len(item) >= wordLengthMoreThan:
                 found.append(item)
     c = Counter(found)
-    print(c)
     #Return the result
-    return tuple((c,sum(c.values())))
+    return tuple((c,sum(c.values()), totalNum))
 
 
 
-def getResultOfCounting(infoAboutWords, accuracy, fileName, file):
+def getResultOfCounting(infoAboutWords, accuracy, infoJson):
     """
     infoAboutWords - tuple. The first element - Counter({"word":int(homMuchAppearsInTheArray)}), the second is total sum of each word in the counter
     accuracy - how much of the most popular words have to appear in the file
@@ -122,13 +122,16 @@ def getResultOfCounting(infoAboutWords, accuracy, fileName, file):
     Imports: nothing
     """
     if infoAboutWords[1] != 0:
-        text = "---------------------------------------------\n%s\n%s\n" % (fileName, infoAboutWords[1])
-        file.write(text)
+        infoJson["totalNum"] = infoAboutWords[2]
+        infoJson["totalPopNum"] = infoAboutWords[1]
+        words = {}
         for word in infoAboutWords[0].most_common(accuracy):
             try:
-                file.write("%s:%s\n" % (word[0], word[1]))
+                words[word[0]] = word[1]
             except UnicodeEncodeError:
                 pass
+        infoJson["words"] = words
+    return infoJson
 
 
 def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="", pathToFiles=""):
@@ -149,9 +152,11 @@ def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="
     import urllib.request
     from bs4 import BeautifulSoup
     import re
+    import json
     pages=[]
     schema = r".*\.%s" % extension
     schema = re.compile(schema)
+    infos = []
     #Get pages from the Internet or from local files
     if fromInternet:
         pages = getPagesFromTheInternet(link)
@@ -159,13 +164,13 @@ def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="
         pages = getPagesFromFiles(pathToFiles)
     
     #Open file, where source links have to be located 
-    fileWithSources = r"%s\%s" % (pathToSave, "sources.txt")
-    fileWithSources = open(fileWithSources, "w")
+    infoJson = r"%s\%s" % (pathToSave, "info.json")
     #Then iterate through each page
     for page in pages:
         soup = BeautifulSoup(page, "lxml")
         hrefContainer =  soup.find_all("h3", {"class":["r"]})#h3 contains <a> with the href to download files
         for item in hrefContainer:
+            info = {"name":"", "totalNum":0, "totalPopNum":0, "words":{}, "link":""}
             if fromInternet:
                 fullLink = item.find("a").get("href")[7:]#if page is from the Internet it looks like /?url?=htttp(s)://...
             else:
@@ -173,9 +178,7 @@ def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="
             if debug:
                 print(fullLink)
             #print looks like ---------------------\nfullLink\n--------------------
-            fileWithSources.write("-----------------------------------------\n")
-            fileWithSources.write(fullLink)
-            fileWithSources.write("\n")
+            info["link"] = fullLink
             #if page is from th Internet it can contain some junk after download link, regexpr deletes this junk
             for link in schema.findall(fullLink):
                 if link:#Throw empty links
@@ -191,6 +194,7 @@ def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="
                             if len(part) > 20:
                                 fileName = part[len(part)-10:]+"."+extension
                             fileName = part
+                            info["name"] = fileName
                     fullPath = r"%s\%s" % (pathToSave, fileName)
                     try:
                         with open(fullPath, "wb") as file:
@@ -199,14 +203,13 @@ def downloadDocuments(pathToSave, extension="doc", *, fromInternet=False, link="
                                     file.write(download.read())
                             except:
                                 pass
-                        if fromInternet:
-                            fileWithSources.write(link)#Write download link because it differs from fullLink
-                            fileWithSources.write("\n")
                     except FileNotFoundError:
                         pass
                     except OSError:
                         pass
-    fileWithSources.close()
+            infos.append(info)
+    with open(infoJson, "w") as file:
+        json.dump(infos, file, ensure_ascii=False, indent=1)
 
 def getPagesFromFiles(pathToFiles):
     """
@@ -236,9 +239,12 @@ def countWordsInFiles(pathToFiles,*, extension="doc"):
     Imports: os
     """
     import os
-    info = open("%s\info.txt" % pathToFiles, "w")#Create file with info
+    import json
+    info = []
+    with open("%s\info.json" % pathToFiles, "r") as file:
+        info = json.load(file)
     i = 0
-    for dir, subdirs, files in os.walk(pathToFiles):
+    """for dir, subdirs, files in os.walk(pathToFiles):
         numOfFiles = len(files)
         if debug:
             print(numOfFiles)
@@ -254,8 +260,14 @@ def countWordsInFiles(pathToFiles,*, extension="doc"):
                 print(text)
                 print(i)
                 print(file)
-            i += 1
-    info.close()
+            i += 1"""
+    for file in info:
+        file = getResultOfCounting(countEveryWord(createTupleOfWords(getTextFromWordDocument(pathToFiles, file["name"]))), 20, file)
+    with open("%s\info.json" % pathToFiles, "w") as file:
+        json.dump(info, file, ensure_ascii=False, indent=1)
+
+
+
 def delteTrash(path):
     with open("%s\info.txt" % path, "r") as file:
         print(file.readline())
@@ -308,7 +320,7 @@ def plotNumsOfWords(infoToPlot):
 if __name__ == "__main__":
     if debug:
         #downloadDocuments(r"D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs", pathToFiles="D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\htmls")
-        #countWordsInFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
+        countWordsInFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
         #delteTrash("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
         #getInfo("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
-        deleteJunkyFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
+        #deleteJunkyFiles("D:\Projects\AIIDocumentFinder\Alpha\AIDocumentFinder\docs")
